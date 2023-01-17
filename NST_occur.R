@@ -1,21 +1,11 @@
-setwd("/Chapter_2/Database/")
-##### Dados NST ocorrencia #####
-# Com os dados limpos, cada estudo é separado em um elemento de uma lista
-# Em cada estudo, left_join com as categorias. Assim, os sites são separados por categoria
-# Criar um data.freme para armazenar os dados
-# Inicio da função - Organização dos dados. É gerado um datafreme com com os dados biológicos (usando dados de ocorrência, todos os valores maior que zero = 1). É gerado um dataframe com 1 coluna, indicando os grupos. 
-# Calcula a frequencia de cada espécie. Primeiro, calcula a frequencia das espécies para cada categoria (Mean). Depois calcula a média das frequencias das categorias (média da média).
-# desfazer o datafreme dos grupos. Assim, RC e NST é calculado com o pool regional de espécies.
-# Roda a Análise. Distancia Bray-curtis, modelo nulo PF, Ponderado pela abundância, Insere o vetor de frequencia, Incluir RC.
-# Refazer o dataframe dos grupos. Rodar a análise novamente. Esta etapa serve somente para obter os pares de sites de cada grupo.
-# Left_Join dos pares com os dados gerados usando Pool Regional.
-# Calcula as médias das categorias
-
-
 library(tidyverse)
 library(NST)
+library(data.table)
+library(sf)
+library(geosphere)
+library(mapview)
 #library(DirichletReg)
-
+# occur ----
 cat <- read_csv("Data/sites_categories.csv")
 cat <- cat %>% 
   dplyr::select(id_unique, starts_with("cat_"))
@@ -26,7 +16,7 @@ data <- datafull %>%
   select(id_unique, id_site, study_id, species, total_abund)
 names <- unique(data$study_id)
 study_list <- data %>% 
-    group_split(study_id, .keep = T)
+  group_split(study_id, .keep = T)
 
 # Spreading species for all studies
 
@@ -40,7 +30,7 @@ for (i in 1:length(matrix_cat)){
   #i = 1
   names(matrix_cat)[[i]] <- matrix_cat[[i]][1,"study_id"] %>% pull
 }
-  
+
 
 equal <- read_csv("Data/equal_study.csv") %>% pull()
 
@@ -53,23 +43,58 @@ matrix_unequal <- lapply(matrix_unequal, select, !c("effort"))
 
 matrix_cat <- c(matrix_equal, matrix_unequal) 
 matrix_cat = matrix_cat[order(names(matrix_cat))] 
+names(matrix_cat)
 
-my_fun <- function(cat, matrix){
+# Dist ----
+
+matrix_dist <- readRDS("Data/Overall_Matrices.Rdata") # From Matrices script
+
+cat_dist <- readRDS("Data/sites_categories_sf.RData")
+cat_dist <- cat_dist %>% 
+  dplyr::select(id_unique, starts_with("cat_"), geom)
+
+matrix_cat_dist <- lapply(matrix_dist, left_join, y = cat_dist, by = "id_unique")
+cat_vector <- c("cat_500","cat_1k","cat_2k", "cat_4k", "cat_8k")
+
+
+
+names(matrix_cat_dist)
+
+as.data.frame(names(matrix_cat),names(matrix_cat_dist))
+
+
+
+my_fun <- function(cat, matrix, m.dist){
+  # occur
+  # list_cat_500 <- data.frame(Low.RC.jaccard = as.double(), Inter.RC.jaccard = as.double(), High.RC.jaccard = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+  # 
+  # list_cat_1k <- data.frame(Low.RC.jaccard = as.double(), Inter.RC.jaccard = as.double(), High.RC.jaccard = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+  # 
+  # list_cat_2k <- data.frame(Low.RC.jaccard = as.double(), Inter.RC.jaccard = as.double(), High.RC.jaccard = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+  # 
+  # list_cat_4k <- data.frame(Low.RC.jaccard = as.double(), Inter.RC.jaccard = as.double(), High.RC.jaccard = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+  # 
+  # list_cat_8k <- data.frame(Low.RC.jaccard = as.double(), Inter.RC.jaccard = as.double(), High.RC.jaccard = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
   
-  list_cat_500 <- data.frame(Low.RC.jaccard = as.double(), Inter.RC.jaccard = as.double(), High.RC.jaccard = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+  list_cat <- list()
   
-  list_cat_1k <- data.frame(Low.RC.jaccard = as.double(), Inter.RC.jaccard = as.double(), High.RC.jaccard = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+  lista.i <- list()
   
-  list_cat_2k <- data.frame(Low.RC.jaccard = as.double(), Inter.RC.jaccard = as.double(), High.RC.jaccard = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+  # #dist
+  # 
+  # geo_list_500 <- data.frame(Low = as.double(), Inter = as.double(), High = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+  # geo_list_1k <- data.frame(Low = as.double(), Inter = as.double(), High = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+  # geo_list_2k <- data.frame(Low = as.double(), Inter = as.double(), High = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+  # geo_list_4k <- data.frame(Low = as.double(), Inter = as.double(), High = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+  # geo_list_8k <- data.frame(Low = as.double(), Inter = as.double(), High = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+  # 
+  # Geo_dist <- list(geo_list_500, geo_list_1k, geo_list_2k, geo_list_4k, geo_list_8k)
+  # names(Geo_dist) <- c("500", "1k", "2k", "4k", "8k")
+  # 
   
-  list_cat_4k <- data.frame(Low.RC.jaccard = as.double(), Inter.RC.jaccard = as.double(), High.RC.jaccard = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
-  
-  list_cat_8k <- data.frame(Low.RC.jaccard = as.double(), Inter.RC.jaccard = as.double(), High.RC.jaccard = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
-  
-  list_cat <- list(list_cat_500, list_cat_1k, list_cat_2k, list_cat_4k, list_cat_8k)
-  for (i in 1:length(matrix)){ # length(matrix)
+  for (i in names(matrix_cat)){ # length(matrix) 
     
-    #i = 2
+    #i = "Juliano_Bogoni"
     matrix.i <- matrix[[i]] 
     
     # Organizing dataframe for biological data and categories
@@ -77,6 +102,26 @@ my_fun <- function(cat, matrix){
       select(!starts_with("cat_")) 
     matrix.i.cat <- matrix.i %>% 
       select(starts_with("cat_")) 
+    #df <- data.frame(Low.RC.jaccard = as.double(), Inter.RC.jaccard = as.double(), High.RC.jaccard = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+    
+    
+    matrix.i_dist <- m.dist[[i]] %>% 
+      st_as_sf()
+    
+    study_name_dist <- names(matrix_dist[i])
+    
+    site_id_dist <- matrix.i_dist$id_unique # a vector with unique id names
+    
+    geo.i <- distm(x = as_Spatial(matrix.i_dist), fun = distHaversine)
+    
+    for (m in 1:ncol(geo.i)){ # Transforming 0 to NA
+      geo.i[m,m] <- NA
+    }
+    
+    #Naming cols and rows with unique id for final matrix
+    rownames(geo.i) <- site_id_dist
+    colnames(geo.i) <- site_id_dist
+    
     
     for(o in 1:5){
       #o = 5
@@ -98,7 +143,7 @@ my_fun <- function(cat, matrix){
       FC=samp.ck$group
       
       # Eliminating categories with 1 or 2 sites. Filter those sites from biological data and categories
-     
+      
       n_sites <- matrix.o %>% 
         count(matrix.o[cat[o]]) %>% 
         arrange(desc(1)) %>% 
@@ -149,40 +194,63 @@ my_fun <- function(cat, matrix){
       
       groups <- pair.gr %>% 
         left_join(RC.jaccard)
+      #high <- groups[groups$group == "High",]
       
-      low.RC <- mean(groups[groups$group=="Low", "RC.jaccard"])
-      inter.RC <- mean(groups[groups$group=="Intermediate", "RC.jaccard"])
-      high.RC <- mean(groups[groups$group=="High", "RC.jaccard"])
+      # 
+      # low.RC <- groups[groups$group=="Low", "RC.jaccard"]
+      # inter.RC <- groups[groups$group=="Intermediate", "RC.jaccard"]
+      # high.RC <- groups[groups$group=="High", "RC.jaccard"]
+      # 
+      # # Summarizing the results into element of list
+      # 
+      # # result <- data.frame(Low.RC.jaccard = as.double(), Inter.RC.jaccard = as.double(), High.RC.jaccard = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
+      # 
+      # 
+      # l <- tibble::lst(low.RC, inter.RC, high.RC)
+      # df.i <- data.frame(lapply(l, `length<-`, max(lengths(l))))
+      # df.i$study_id <- matrix.i[1,"study_id"] %>% pull()
+      # 
+      # # result[,1] <- low.RC
+      # # result[,2] <- inter.RC
+      # # result[,3] <- high.RC
+      # # result[,4] <- matrix.i[1,"study_id"] %>% pull()
+      # lista.i[[i]] <- df.i
+      # list_cat[[o]] <- lista.i
+      # 
+      # # Dist
+      # 
+      # #o = 5
+      # 
       
-      # Summarizing the results into element of list
+      for(p in 1:length(groups$group)){
+        #i = 1
+        groups$geo[p] <- geo.i[groups[p,2],groups[p,3]]
+        
+      }
       
-      result <- data.frame(Low.RC.jaccard = as.double(), Inter.RC.jaccard = as.double(), High.RC.jaccard = as.double(), study_id = as.character(), stringsAsFactors=FALSE)
-      
-      result[1,1] <- low.RC
-      result[1,2] <- inter.RC
-      result[1,3] <- high.RC
-      result[1,4] <- matrix.i[1,"study_id"] %>% pull()
-      list_cat[[o]][i,] <- result
-     
+      lista.i[[i]] <- groups
+      list_cat[[o]] <- lista.i
+    
     }
+    
   }
   
-    return(list_cat)
+  return(list_cat)
+}
+NST_occur <- my_fun(cat = cat_vector, matrix = matrix_cat, m.dist = matrix_cat_dist)
+
+
+NST_occur_final <- list()
+for(i in 1:5){
+  NST_occur_final[[i]] <- rbindlist(NST_occur[[i]])
 }
 
-cat_vector <- c("cat_500","cat_1k","cat_2k", "cat_4k", "cat_8k")
 
-NST_occur <- my_fun(cat = cat_vector, matrix = matrix_cat)
-
-saveRDS(NST_occur[[1]], "NST/NST_occur_500.Rdata")
-saveRDS(NST_occur[[2]], "NST/NST_occur_1k.Rdata")
-saveRDS(NST_occur[[3]], "NST/NST_occur_2k.Rdata")
-saveRDS(NST_occur[[4]], "NST/NST_occur_4k.Rdata")
-saveRDS(NST_occur[[5]], "NST/NST_occur_8k.Rdata")
-
-
-
-
+saveRDS(NST_occur_final[[1]], "NST/NST_occur_500.Rdata")
+saveRDS(NST_occur_final[[2]], "NST/NST_occur_1k.Rdata")
+saveRDS(NST_occur_final[[3]], "NST/NST_occur_2k.Rdata")
+saveRDS(NST_occur_final[[4]], "NST/NST_occur_4k.Rdata")
+saveRDS(NST_occur_final[[5]], "NST/NST_occur_8k.Rdata")
 
 
 #rm(list=ls())
