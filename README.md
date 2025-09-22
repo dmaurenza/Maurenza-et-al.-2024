@@ -1,1 +1,1 @@
-# Homogenization
+# Maurenza, D., Crouzeilles, R., Prevedello, J. A., Almeida-Gomes, M., Schmoeler, M., Pardini, R., Banks-Leite, C., Vieira, M. V., Metzger, J. P., Fonseca, C. R., Zanin, M., Mendes, A. F., Boesing, A. L., Rezende, A. A., Filgueiras, B. K. C., Barros, C. D. S. D., Estavillo, C., Peres, C. A., Esteves, C. F., … Püttker, T. (2025). Effects of deforestation on multitaxa community similarity in the Brazilian Atlantic Forest. Conservation Biology, 39, e14419. https://doi.org/10.1111/cobi.14419
